@@ -434,6 +434,18 @@ static Status ValuesFromConstNode(const NodeDef& node,
           val_size = tensor.double_val_size();
           if (val_size > 0) val_i = tensor.double_val()[i];
           break;
+        case DT_UINT32:
+          val_size = tensor.uint32_val_size();
+          if (val_size > 0) val_i = tensor.uint32_val()[i];
+          break;
+        case DT_UINT64:
+          val_size = tensor.uint64_val_size();
+          if (val_size > 0) val_i = tensor.uint64_val()[i];
+          break;
+        case DT_HALF:
+          val_size = tensor.half_val_size();
+          if (val_size > 0) val_i = tensor.half_val()[i];
+          break;
         default:
           OVTF_VLOG(0)
               << "Const node has empty tensor and we don't know how to "
