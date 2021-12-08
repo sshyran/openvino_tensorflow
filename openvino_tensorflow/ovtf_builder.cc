@@ -337,6 +337,20 @@ static Status GetStaticInputNode(
       node_ = ConstructNgNode<opset::Constant>(op->name(), type, ng::Shape{},
                                                vec_i64[0]);
     } break;
+    case DataType::DT_UINT32: {
+      std::vector<uint32> vec_u32;
+      TF_RETURN_IF_ERROR(
+          GetStaticInputVector(op, input_index, static_input_map, &vec_u32));
+      node_ = ConstructNgNode<opset::Constant>(op->name(), type, ng::Shape{},
+                                               vec_u32[0]);
+    } break;
+    case DataType::DT_UINT64: {
+      std::vector<uint64> vec_u64;
+      TF_RETURN_IF_ERROR(
+          GetStaticInputVector(op, input_index, static_input_map, &vec_u64));
+      node_ = ConstructNgNode<opset::Constant>(op->name(), type, ng::Shape{},
+                                               vec_u64[0]);
+    } break;
     default:
       return errors::Internal("GetStaticInputNode: TF data type ",
                               DataType_Name(dt), " not supported.");
