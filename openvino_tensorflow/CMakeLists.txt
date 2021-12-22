@@ -6,7 +6,6 @@ set(LIB_NAME openvino_tensorflow)
 
 include_directories(${TensorFlow_INCLUDE_DIR})
 include_directories(${TensorFlow_INCLUDE_DIR}/external/nsync/public)
-include_directories(${NGRAPH_INSTALL_DIR}/include)
 include_directories(${ABSL_INCLUDE_DIR})
 
 # For some reason the following is needed for ABI compatibility with TF.
@@ -60,12 +59,10 @@ endif()
 add_library(${LIB_NAME} SHARED ${SRC})
 
 if(WIN32)
-  get_target_property(ngraph_lib_value ngraph_lib IMPORTED_LOCATION)
   target_link_libraries(
             ${LIB_NAME}
             ovtf_logger
             ${TensorFlow_FRAMEWORK_LIBRARY}
-            ${ngraph_lib_value}
             absl_algorithm
             absl_container
             absl_strings
@@ -77,7 +74,6 @@ else()
           ${LIB_NAME}
           ovtf_logger
           ${TensorFlow_FRAMEWORK_LIBRARY}
-          ngraph_lib
           absl_algorithm
           absl_container
           absl_strings
@@ -90,8 +86,6 @@ target_compile_definitions(
     ${LIB_NAME} PRIVATE
     _GLIBCXX_USE_CXX11_ABI=${TensorFlow_CXX_ABI}
 )
-
-target_include_directories(${LIB_NAME} PUBLIC "${NGRAPH_INSTALL_DIR}/include")
 
 string(REPLACE "." ";" TF_VERSION_LIST ${TensorFlow_VERSION})
 list(GET TF_VERSION_LIST 0 TF_MAJOR_VERSION)
@@ -117,23 +111,6 @@ message(STATUS "OVTF_INSTALL_LIB_DIR: ${OVTF_INSTALL_LIB_DIR}")
 # First install the libopenvino_tensorflow.so and headers
 install(TARGETS ${LIB_NAME} DESTINATION "${OVTF_INSTALL_LIB_DIR}")
 
-# Next install all the other prerequisites
-if(OS_VERSION STREQUAL "\"centos\"")
-	install(DIRECTORY ${NGRAPH_INSTALL_DIR}/lib64/ DESTINATION "${OVTF_INSTALL_LIB_DIR}" )
-else()
-  if(WIN32)
-    file(GLOB NGRAPH_LIB_FILES "${NGRAPH_INSTALL_DIR}/lib/*")
-    foreach(LIB_FILE ${NGRAPH_LIB_FILES})
-      get_filename_component(lib_file_real_path ${LIB_FILE} ABSOLUTE)
-      get_filename_component(lib_file_name ${LIB_FILE} NAME)
-      if(NOT(${lib_file_name} MATCHES "onnx.*"))
-        install(FILES ${lib_file_real_path} DESTINATION "${OVTF_INSTALL_LIB_DIR}")
-      endif()
-    endforeach()
-  else()
-    install(DIRECTORY ${NGRAPH_INSTALL_DIR}/lib/ DESTINATION "${OVTF_INSTALL_LIB_DIR}" )
-  endif()
-endif()
 
 # Install OpenVINO libraries
 if (APPLE)
@@ -145,12 +122,12 @@ else()
 endif()
 
 if(WIN32)
-  set(IE_LIBS ${OPENVINO_ARTIFACTS_DIR}/deployment_tools/inference_engine/bin/intel64/Release/)
-  set(TBB_LIBS ${OPENVINO_ARTIFACTS_DIR}/deployment_tools/inference_engine/external/tbb/bin/)
+  set(IE_LIBS ${OPENVINO_ARTIFACTS_DIR}/runtime/bin/intel64/Release/)
+  set(TBB_LIBS ${OPENVINO_ARTIFACTS_DIR}/runtime/3rdparty/tbb/bin/)
   install(FILES ${CMAKE_INSTALL_PREFIX}/../ocm/OCM/Release/${OCM_LIB} DESTINATION "${OVTF_INSTALL_LIB_DIR}")
 else()
-  set(IE_LIBS ${OPENVINO_ARTIFACTS_DIR}/deployment_tools/inference_engine/lib/intel64/)
-  set(TBB_LIBS ${OPENVINO_ARTIFACTS_DIR}/deployment_tools/inference_engine/external/tbb/lib/)
+  set(IE_LIBS ${OPENVINO_ARTIFACTS_DIR}/runtime/lib/intel64/)
+  set(TBB_LIBS ${OPENVINO_ARTIFACTS_DIR}/runtime/3rdparty/tbb/lib/)
   install(FILES ${CMAKE_INSTALL_PREFIX}/../ocm/OCM/${OCM_LIB} DESTINATION "${OVTF_INSTALL_LIB_DIR}")
 endif()
 if(NOT DISABLE_PACKAGING_OPENVINO_LIBS)
@@ -187,7 +164,6 @@ endif()
 # target "SCRIPT" so that the "SCRIPT" (in ths case CreatePipWhl.cmake)
 # So any variable that we need to propagate needs to be added here
 install(CODE "set(OS_VERSION ${OS_VERSION})")
-install(CODE "set(NGRAPH_INSTALL_DIR \"${NGRAPH_INSTALL_DIR}\")")
 install(CODE "set(OVTF_SRC_DIR \"${CMAKE_CURRENT_SOURCE_DIR}/../\")")
 install(CODE "set(OVTF_INSTALL_DIR \"${CMAKE_INSTALL_PREFIX}\")")
 install(CODE "set(TensorFlow_GIT_VERSION \"${TensorFlow_GIT_VERSION}\")")

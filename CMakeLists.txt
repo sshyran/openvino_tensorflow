@@ -129,18 +129,6 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=${OPENVINO_TF_CXX11_ABI}")    
 endif()
 
-if(APPLE)
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        set(LIBNGRAPH "libngraphd.dylib")
-    else()
-        set(LIBNGRAPH "libngraph.dylib")
-    endif()
-elseif(WIN32)
-    set(LIBNGRAPH "ngraph.lib")
-else()
-    set(LIBNGRAPH "libngraph.so")
-endif(APPLE)
-
 if(WIN32)
 	add_definitions(-DNOMINMAX)
 endif()
@@ -151,7 +139,7 @@ option(UNIT_TEST_TF_CC_DIR "Location where TensorFlow CC library is located" FAL
 option(USE_OPENVINO_FROM_LOCATION "Use OpenVINO located in OPENVINO_ARTIFACTS_DIR" FALSE)
 option(OPENVINO_ARTIFACTS_DIR "Where would OpenVINO be installed after build" FALSE)
 
-set(InferenceEngine_DIR ${OPENVINO_ARTIFACTS_DIR}/deployment_tools/inference_engine/share)
+set(InferenceEngine_DIR ${OPENVINO_ARTIFACTS_DIR}/runtime/cmake)
 find_package(InferenceEngine REQUIRED)
 
 set(ngraph_DIR ${OPENVINO_ARTIFACTS_DIR}/deployment_tools/ngraph/cmake)
@@ -186,7 +174,9 @@ message(STATUS "UNIT_TEST_ENABLE:           ${UNIT_TEST_ENABLE}")
 message(STATUS "OPENVINO_ARTIFACTS_DIR:     ${OPENVINO_ARTIFACTS_DIR}")
 message(STATUS "USE_PRE_BUILT_OPENVINO:       ${USE_PRE_BUILT_OPENVINO}")
 message(STATUS "OPENVINO_VERSION: ${OPENVINO_VERSION}")
-if (${OPENVINO_VERSION} MATCHES "2021.4.2")
+if (${OPENVINO_VERSION} MATCHES "master")
+  add_definitions(-DOPENVINO_MASTER=1)
+elseif (${OPENVINO_VERSION} MATCHES "2021.4.2")
   add_definitions(-DOPENVINO_2021_4_2=1)
 elseif (${OPENVINO_VERSION} MATCHES "2021.4.1")
   add_definitions(-DOPENVINO_2021_4_1=1)
@@ -209,19 +199,6 @@ if(OS_VERSION STREQUAL "\"centos\"")
 else()
     set(LIB "lib")
 endif()
-
-if(ngraph_FOUND)
-    set(NGRAPH_INSTALL_DIR ${OPENVINO_ARTIFACTS_DIR}/deployment_tools/ngraph/)
-else()
-    set(NGRAPH_INSTALL_DIR ${OPENVINO_ARTIFACTS_DIR})
-endif()
-set(NGRAPH_IMPORTED_LOCATION ${NGRAPH_INSTALL_DIR}/${LIB}/${LIBNGRAPH})
-add_library(ngraph_lib SHARED IMPORTED)
-set_target_properties(
-    ngraph_lib
-    PROPERTIES IMPORTED_LOCATION
-    ${NGRAPH_IMPORTED_LOCATION}
-)
 
 SET(BASEPATH "${CMAKE_SOURCE_DIR}")
 INCLUDE_DIRECTORIES("${BASEPATH}")

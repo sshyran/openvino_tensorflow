@@ -65,9 +65,6 @@ if (PYTHON)
             DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/python/openvino_tensorflow/licenses")
     endforeach()
 
-    # Get the list of license files for ngraph
-    file(GLOB NGRAPH_LICENSE_FILES "${NGRAPH_INSTALL_DIR}/licenses/*")
-
     # Copy the licenses for openvino-tensorflow
     foreach(DEP_FILE ${NGRAPH_LICENSE_FILES})
         get_filename_component(lic_file_real_path ${DEP_FILE} ABSOLUTE)
