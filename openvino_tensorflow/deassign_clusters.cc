@@ -206,92 +206,55 @@ Status DeassignClusters(Graph* graph) {
     int non_trivial_count = 0;
 
     std::unordered_set<std::string> trivial_ops = {"Const", "Identitiy"};
+    std::unordered_set<std::string> essential_ops = {"Conv2D", "_FusedConv2D", 
+    "DepthwiseConv2dNative", "_FusedDepthwiseConv2dNative"};
+
+    bool essential_ops_present = false;
+
     for (auto node : nodes) {
       if (trivial_ops.find(node->type_string()) == trivial_ops.end()) {
         non_trivial_count++;
       }
-    }
 
-    int min_non_trivial_nodes = num_nodes_marked_before_deassign >> 5;
-    int avg_nodes_marked_before_deassign =
-        num_nodes_marked_before_deassign / cluster_map.size();
-    if (min_non_trivial_nodes < avg_nodes_marked_before_deassign * 2) {
-      min_non_trivial_nodes >>= 2;
-    }
-    if (min_non_trivial_nodes < 6) {
-      min_non_trivial_nodes = 6;
-    }
-    if (std::getenv("OPENVINO_TF_MIN_NONTRIVIAL_NODES") != nullptr) {
-      min_non_trivial_nodes =
-          std::stoi(std::getenv("OPENVINO_TF_MIN_NONTRIVIAL_NODES"));
-    }
-    OVTF_VLOG(1) << "MIN_NONTRIVIAL_NODES set to " << min_non_trivial_nodes;
-
-    if (non_trivial_count < min_non_trivial_nodes) {
-      OVTF_VLOG(2) << "Busting cluster " << cluster_idx;
-      for (auto node : nodes) {
-        OVTF_VLOG(2) << "Busting node: " << node->name() << " ["
-                     << node->type_string() << "]";
-
-        // TODO(amprocte): move attr name to a constant
-        node->ClearAttr("_ovtf_cluster");
-        // TODO(amprocte): move attr name to a constant
-        node->ClearAttr("_ovtf_marked_for_clustering");
-
-        deassigned_histogram[node->type_string()]++;
-      }
-      continue;
-    }
-    // Disable dynamic to static
-    std::vector<Node*> dyn_node_check;
-    std::set<Node*> visited_node_check;
-    for (auto node : nodes) {
-      if (node->type_string() == "NonMaxSuppressionV2" ||
-          node->type_string() == "Reshape") {
-        dyn_node_check.push_back(node);
-        visited_node_check.insert(node);
+      // never ignore clusters with essential ops
+      if (essential_ops.find(node->type_string()) != essential_ops.end()) {
+        essential_ops_present = true;
+        OVTF_VLOG(2) << "Found essential op " 
+                     << node->type_string() << " Skipping non-trivial check." << endl; 
+        break;
       }
     }
-    bool invalid_dyn_op = false;
-    while (dyn_node_check.size() > 0) {
-      Node* node = dyn_node_check.back();
-      dyn_node_check.pop_back();
+    if (!essential_ops_present) {
+      int min_non_trivial_nodes = num_nodes_marked_before_deassign >> 5;
+      int avg_nodes_marked_before_deassign =
+          num_nodes_marked_before_deassign / cluster_map.size();
+      if (min_non_trivial_nodes < avg_nodes_marked_before_deassign * 2) {
+        min_non_trivial_nodes >>= 2;
+      }
+      if (min_non_trivial_nodes < 6) {
+        min_non_trivial_nodes = 6;
+      }
+      if (std::getenv("OPENVINO_TF_MIN_NONTRIVIAL_NODES") != nullptr) {
+        min_non_trivial_nodes =
+            std::stoi(std::getenv("OPENVINO_TF_MIN_NONTRIVIAL_NODES"));
+      }
+      OVTF_VLOG(1) << "MIN_NONTRIVIAL_NODES set to " << min_non_trivial_nodes;
 
-      for (auto it : node->out_nodes()) {
-        int out_cluster;
-        Status s = GetNodeAttr(it->attrs(), "_ovtf_cluster", &out_cluster);
-        if (s == Status::OK()) {
-          if (out_cluster == cluster_idx &&
-              (it->type_string() != "NonMaxSuppressionV2" &&
-               it->type_string() != "Reshape")) {
-            if (it->type_string() == "ZerosLike" ||
-                it->type_string() == "Size" || it->type_string() == "Conv2D" ||
-                it->type_string() == "Unpack") {
-              invalid_dyn_op = true;
-              break;
-            } else if (visited_node_check.find(it) ==
-                       visited_node_check.end()) {
-              dyn_node_check.push_back(it);
-              visited_node_check.insert(it);
-            }
-          }
+      if (non_trivial_count < min_non_trivial_nodes) {
+        OVTF_VLOG(2) << "Busting cluster " << cluster_idx;
+        for (auto node : nodes) {
+          OVTF_VLOG(2) << "Busting node: " << node->name() << " ["
+                      << node->type_string() << "]";
+
+          // TODO(amprocte): move attr name to a constant
+          node->ClearAttr("_ovtf_cluster");
+          // TODO(amprocte): move attr name to a constant
+          node->ClearAttr("_ovtf_marked_for_clustering");
+
+          deassigned_histogram[node->type_string()]++;
         }
+        continue;
       }
-    }
-    if (invalid_dyn_op) {
-      OVTF_VLOG(2) << "Busting cluster " << cluster_idx;
-      for (auto node : nodes) {
-        OVTF_VLOG(2) << "Busting node: " << node->name() << " ["
-                     << node->type_string() << "]";
-
-        // TODO(amprocte): move attr name to a constant
-        node->ClearAttr("_ovtf_cluster");
-        // TODO(amprocte): move attr name to a constant
-        node->ClearAttr("_ovtf_marked_for_clustering");
-
-        deassigned_histogram[node->type_string()]++;
-      }
-      continue;
     }
 
     unordered_set<std::string> input_args;

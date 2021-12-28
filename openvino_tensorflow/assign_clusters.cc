@@ -389,13 +389,14 @@ Status AssignClusters(Graph* graph) {
   enum EdgeNonContractionReasons {
     NOTANOP,      // edge connects to non-ops
     UNSUPPORTED,  // either the src or dst is an unsupported op
+    DYNAMIC,      // either the src or dst doesn't support dynamic output shapes
     DEADNESS,     // deadness criteria not met
     SAMECLUSTER,  // both ends lie in the same cluster
     STATICINPUT,  // static input in dst (not fed by const)
     PATHEXISTS    // base case reason. contraction causes cycles
   };
   static std::vector<string> reason_string(  // to convert the enum to string
-      {"NOTANOP", "UNSUPPORTED", "DEADNESS", "SAMECLUSTER", "STATICINPUT",
+      {"NOTANOP", "UNSUPPORTED", "DYNAMIC", "DEADNESS", "SAMECLUSTER", "STATICINPUT",
        "PATHEXISTS"});
   // a cluster pair is the string "cluster1_id, cluster2_id"
   // Using string, because a pair won't hash unless implemented
@@ -535,6 +536,24 @@ Status AssignClusters(Graph* graph) {
           log_reason(EdgeNonContractionReasons::UNSUPPORTED, edge);
           cluster_separation_reason[get_string_key(src_index, dst_index)]
               .push_back(EdgeNonContractionReasons::UNSUPPORTED);
+        }
+        continue;
+      }
+
+      std::vector<std::string> dyn_out_nodes = {"NonMaxSuppressionV2", "Reshape"};
+      std::vector<std::string> nodes_needing_static_inputs= {"ZerosLike", "Size", "Conv2D", "Unpack"};
+
+      if (std::any_of(dyn_out_nodes.begin(), dyn_out_nodes.end(), [src](std::string n){return n==src->type_string();}) &&
+          std::any_of(nodes_needing_static_inputs.begin(), nodes_needing_static_inputs.end(), [dst](std::string n){return n==dst->type_string();}))
+      {
+        OVTF_VLOG(5) << "Skipping (dynamic op outputs): " << src->name() << "["
+                     << edge->src_output() << "]@" << src_index << " -> "
+                     << dst->name() << "[" << edge->dst_input() << "]@"
+                     << dst_index;
+        if (collect_non_contracting_edge_info) {
+          log_reason(EdgeNonContractionReasons::DYNAMIC, edge);
+          cluster_separation_reason[get_string_key(src_index, dst_index)]
+              .push_back(EdgeNonContractionReasons::DYNAMIC);
         }
         continue;
       }
@@ -688,7 +707,7 @@ Status AssignClusters(Graph* graph) {
   OVTF_VLOG(2) << "Tagging done";
 
   if (api::IsLoggingPlacement()) {
-    int num_reasons = 6;  // the number of elements in the reasons enum
+    int num_reasons = 7;  // the number of elements in the reasons enum
     // histogram of reasons of non-contraction of clusters
     vector<int> reason_count_clusters(num_reasons, 0);
     vector<int> reason_count_encapsulates(num_reasons, 0);
@@ -706,7 +725,7 @@ Status AssignClusters(Graph* graph) {
     };
     std::cout
         << "Encapsulate i->j: non contraction reason histogram (Cannot be "
-           "UNSUPPORTED, NOTANOP or SAMECLUSTER because unsupported ops will "
+           "UNSUPPORTED, DYNAMIC, NOTANOP or SAMECLUSTER because unsupported ops will "
            "not be "
            "assigned an encapsulate)\n";
     for (auto it : cluster_separation_reason) {
