@@ -206,42 +206,56 @@ Status DeassignClusters(Graph* graph) {
     int non_trivial_count = 0;
 
     std::unordered_set<std::string> trivial_ops = {"Const", "Identitiy"};
+    std::unordered_set<std::string> essential_ops = {"_FusedConv2D", "Conv2D", "DepthwiseConv2dNative"};
+
+    bool essential_ops_present = false;
+
     for (auto node : nodes) {
       if (trivial_ops.find(node->type_string()) == trivial_ops.end()) {
         non_trivial_count++;
       }
-    }
 
-    int min_non_trivial_nodes = num_nodes_marked_before_deassign >> 5;
-    int avg_nodes_marked_before_deassign =
-        num_nodes_marked_before_deassign / cluster_map.size();
-    if (min_non_trivial_nodes < avg_nodes_marked_before_deassign * 2) {
-      min_non_trivial_nodes >>= 2;
-    }
-    if (min_non_trivial_nodes < 6) {
-      min_non_trivial_nodes = 6;
-    }
-    if (std::getenv("OPENVINO_TF_MIN_NONTRIVIAL_NODES") != nullptr) {
-      min_non_trivial_nodes =
-          std::stoi(std::getenv("OPENVINO_TF_MIN_NONTRIVIAL_NODES"));
-    }
-    OVTF_VLOG(1) << "MIN_NONTRIVIAL_NODES set to " << min_non_trivial_nodes;
-
-    if (non_trivial_count < min_non_trivial_nodes) {
-      OVTF_VLOG(2) << "Busting cluster " << cluster_idx;
-      for (auto node : nodes) {
-        OVTF_VLOG(2) << "Busting node: " << node->name() << " ["
-                     << node->type_string() << "]";
-
-        // TODO(amprocte): move attr name to a constant
-        node->ClearAttr("_ovtf_cluster");
-        // TODO(amprocte): move attr name to a constant
-        node->ClearAttr("_ovtf_marked_for_clustering");
-
-        deassigned_histogram[node->type_string()]++;
+      // clusters with essential ops
+      if (essential_ops.find(node->type_string()) != essential_ops.end()) {
+        essential_ops_present = true;
+        OVTF_VLOG(2) << "Found essential op " 
+                     << node->type_string() << ", Skipping non-trivial check." << endl;
+        break;
       }
-      continue;
     }
+    if (!essential_ops_present) {
+      int min_non_trivial_nodes = num_nodes_marked_before_deassign >> 6;
+      int avg_nodes_marked_before_deassign =
+          num_nodes_marked_before_deassign / cluster_map.size();
+      if (min_non_trivial_nodes < avg_nodes_marked_before_deassign * 2) {
+        min_non_trivial_nodes >>= 2;
+      }
+      if (min_non_trivial_nodes < 6) {
+        min_non_trivial_nodes = 6;
+      }
+      if (std::getenv("OPENVINO_TF_MIN_NONTRIVIAL_NODES") != nullptr) {
+        min_non_trivial_nodes =
+            std::stoi(std::getenv("OPENVINO_TF_MIN_NONTRIVIAL_NODES"));
+      }
+      OVTF_VLOG(1) << "MIN_NONTRIVIAL_NODES set to " << min_non_trivial_nodes;
+      if (non_trivial_count < min_non_trivial_nodes) {
+        OVTF_VLOG(2) << "Busting cluster " << cluster_idx;
+        for (auto node : nodes) {
+          OVTF_VLOG(2) << "Busting node: " << node->name() << " ["
+                      << node->type_string() << "]";
+
+          // TODO(amprocte): move attr name to a constant
+          node->ClearAttr("_ovtf_cluster");
+          // TODO(amprocte): move attr name to a constant
+          node->ClearAttr("_ovtf_marked_for_clustering");
+
+          deassigned_histogram[node->type_string()]++;
+        }
+        continue;
+      }
+    }
+
+
     // Disable dynamic to static
     std::vector<Node*> dyn_node_check;
     std::set<Node*> visited_node_check;
