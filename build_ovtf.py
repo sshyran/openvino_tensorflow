@@ -197,9 +197,15 @@ def main():
         raise AssertionError(
             "\"use_tensorflow_from_location\" and \"build_tf_from_source\" "
             "cannot be used together.")
+<<<<<<< HEAD
     if (arguments.openvino_version not in ["master", "2022.1.0"]):
         raise AssertionError(
             "Only 2022.1.0 OpenVINO version and master branch are supported")
+=======
+    if (arguments.openvino_version not in ["master", "2022.1"]):
+        raise AssertionError(
+            "Only 2022.1 OpenVINO version and master branch are supported")
+>>>>>>> 5a91674f (Update build options, doc and OCM submodule (#269))
 
     if arguments.use_openvino_from_location != '':
         if not os.path.isdir(arguments.use_openvino_from_location):
@@ -532,8 +538,14 @@ def main():
         )
         if (arguments.openvino_version == "master"):
             openvino_release_tag = "master"
+<<<<<<< HEAD
         elif (arguments.openvino_version == "2022.1.0"):
             openvino_release_tag = "2022.1.0"
+=======
+        elif (arguments.openvino_version == "2022.1"):
+            #TODO: repleace it with 2022.1 when the tag is created on OV branch
+            openvino_release_tag = "releases/2022/1"
+>>>>>>> 5a91674f (Update build options, doc and OCM submodule (#269))
 
         # Download OpenVINO
         download_repo(
