@@ -84,8 +84,19 @@ bool Backend::IsSupported(const ov::Node& node) const {
   // TODO: check if the given backend/device supports the op. Right now we're
   // assuming
   // that the selected backend supports all opset7 ops
-  const auto& opset = ov::get_opset7();
-  return opset.contains_op_type(&node);
+  
+  // const auto& opset = ov::get_opset7();
+  // return opset.contains_op_type(&node);
+
+  std::vector<ov::OpSet> supported_opsets;
+  supported_opsets.push_back(ov::get_opset7());
+  supported_opsets.push_back(ov::get_opset8());
+  bool op_supported = false;
+  for (const auto& opset : supported_opsets) {
+    op_supported = opset.contains_op_type(&node);
+    if (op_supported) break;
+  }
+  return op_supported;
 }
 
 }  // namespace openvino_tensorflow

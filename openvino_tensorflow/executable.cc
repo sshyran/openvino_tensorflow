@@ -29,14 +29,29 @@ Executable::Executable(shared_ptr<ov::Model> model, string device,
       m_trivial_fn{nullptr},
       m_model(model) {
   OVTF_VLOG(2) << "Checking for unsupported ops";
-  const auto& opset = ov::get_opset7();
+  // const auto& opset = ov::get_opset7();
+  // for (const auto& node : model->get_ops()) {
+  //   if (!opset.contains_op_type(node.get())) {
+  //     OVTF_VLOG(0) << "UNSUPPORTED OP DETECTED: " << node->get_type_info().name;
+  //     throw runtime_error("Detected op " + node->get_name() +
+  //                         " not belonging to opset7!");
+  //   }
+  // }
+  std::vector<ov::OpSet> supported_opsets;
+  supported_opsets.push_back(ov::get_opset7());
+  supported_opsets.push_back(ov::get_opset8());
   for (const auto& node : model->get_ops()) {
-    if (!opset.contains_op_type(node.get())) {
+    bool op_supported = false;
+    for (const auto& opset : supported_opsets) {
+      op_supported = opset.contains_op_type(node.get());
+      if (op_supported) break;
+    }
+    if (!op_supported) {
       OVTF_VLOG(0) << "UNSUPPORTED OP DETECTED: " << node->get_type_info().name;
       throw runtime_error("Detected op " + node->get_name() +
-                          " not belonging to opset7!");
+                          " not belonging to opset7 or opset8!");
     }
-  }
+  }  
 
   OVTF_VLOG(2) << "Checking for unused parameters";
   auto parameters = model->get_parameters();

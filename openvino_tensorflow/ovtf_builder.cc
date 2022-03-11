@@ -2489,7 +2489,7 @@ static Status TranslateMaxPoolOp(const Node* op,
   ov::Shape ng_padding_below(padding_below.begin(), padding_below.end());
   ov::Shape ng_padding_above(padding_above.begin(), padding_above.end());
 
-  auto ng_maxpool = ConstructNgNode<opset::MaxPool>(
+  auto ng_maxpool = ConstructNgNode<ov::opset7::MaxPool>(
       op->name(), ng_input, ng_strides, ng_padding_below, ng_padding_above,
       ng_kernel_shape, ov::op::RoundingType::FLOOR);
 

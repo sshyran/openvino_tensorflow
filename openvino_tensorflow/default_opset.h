@@ -9,12 +9,13 @@
 #pragma once
 
 #include "openvino/opsets/opset7.hpp"
+#include "openvino/opsets/opset8.hpp"
 
 namespace tensorflow {
 namespace openvino_tensorflow {
 
-namespace opset = ov::opset7;
-namespace default_opset = ov::opset7;
+namespace opset = ov::opset8;
+namespace default_opset = ov::opset8;
 
 }  // namespace openvino_tensorflow
 }  // namespace tensorflow
