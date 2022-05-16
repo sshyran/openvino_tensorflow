@@ -197,19 +197,9 @@ def main():
         raise AssertionError(
             "\"use_tensorflow_from_location\" and \"build_tf_from_source\" "
             "cannot be used together.")
-<<<<<<< HEAD
-<<<<<<< HEAD
     if (arguments.openvino_version not in ["master", "2022.1.0"]):
         raise AssertionError(
             "Only 2022.1.0 OpenVINO version and master branch are supported")
-=======
-    if (arguments.openvino_version not in ["master", "2022.1"]):
-=======
-    if (arguments.openvino_version not in ["master", "tf_fe/protobuf_revert", "2022.1"]):
->>>>>>> cb80c775 (TFFE merged into releases/2.0 (resolved conficts))
-        raise AssertionError(
-            "Only 2022.1 OpenVINO version and master branch are supported")
->>>>>>> 5a91674f (Update build options, doc and OCM submodule (#269))
 
     if arguments.use_openvino_from_location != '':
         if not os.path.isdir(arguments.use_openvino_from_location):
@@ -542,24 +532,13 @@ def main():
         )
         if (arguments.openvino_version == "master"):
             openvino_release_tag = "master"
-<<<<<<< HEAD
-<<<<<<< HEAD
         elif (arguments.openvino_version == "2022.1.0"):
             openvino_release_tag = "2022.1.0"
-=======
-=======
-        elif (arguments.openvino_version == "tf_fe/protobuf_revert"):
-            openvino_release_tag = "tf_fe/protobuf_revert"
->>>>>>> cb80c775 (TFFE merged into releases/2.0 (resolved conficts))
-        elif (arguments.openvino_version == "2022.1"):
-            #TODO: repleace it with 2022.1 when the tag is created on OV branch
-            openvino_release_tag = "releases/2022/1"
->>>>>>> 5a91674f (Update build options, doc and OCM submodule (#269))
 
         # Download OpenVINO
         download_repo(
             "openvino",
-            "https://github.com/mvafin/openvino.git",
+            "https://github.com/openvinotoolkit/openvino.git",
             openvino_release_tag,
             submodule_update=True)
         openvino_src_dir = os.path.join(os.getcwd(), "openvino")
